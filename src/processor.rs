@@ -146,6 +146,7 @@ fn process_layers(
                             layer_info: &layer_info,
                             config,
                             sprite_output_dir: &sprite_output_dir,
+                            group_id: None, // pixel layers are not groups
                         };
                         match processor.process(&ctx, all_layers, psd) {
                             Ok(sprite_info) => {
@@ -213,6 +214,7 @@ fn process_layers(
                         layer_info: &layer_info,
                         config,
                         sprite_output_dir: &sprite_output_dir,
+                        group_id: Some(*gid),
                     };
                     match processor.process(&ctx, all_layers, psd) {
                         Ok(sprite_info) => {

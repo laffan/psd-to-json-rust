@@ -14,6 +14,8 @@ pub struct SpriteContext<'a> {
     pub layer_info: &'a Map<String, Value>,
     pub config: &'a crate::config::Config,
     pub sprite_output_dir: &'a Path,
+    /// When the sprite is a PSD group folder, this is its group ID.
+    pub group_id: Option<u32>,
 }
 
 /// Trait that all sprite sub-types implement.

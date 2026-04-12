@@ -18,22 +18,20 @@ impl SpriteProcessor for AtlasSprite {
         let mut result = ctx.layer_info.clone();
         let name = ctx.layer_info.get("name").and_then(|v| v.as_str()).unwrap_or("unnamed");
 
-        // Find the group
-        let group_entry = psd.groups().iter().find(|(_, g)| {
-            parse_layer_name(g.name())
-                .map(|p| p.name == name)
-                .unwrap_or(false)
-        });
-
-        let (_gid, _group) = match group_entry {
-            Some((&id, g)) => (id, g),
+        // Find the group — prefer the ID passed via context, fall back to name search
+        let gid = match ctx.group_id.or_else(|| {
+            psd.groups().iter().find(|(_, g)| {
+                parse_layer_name(g.name())
+                    .map(|p| p.name == name)
+                    .unwrap_or(false)
+            }).map(|(&id, _)| id)
+        }) {
+            Some(id) => id,
             None => {
                 result.insert("note".into(), Value::String("Atlas group not found".into()));
                 return Ok(result);
             }
         };
-
-        let gid = _gid;
 
         // Collect unique frames from visible children
         let mut frames: Vec<AtlasFrame> = Vec::new();

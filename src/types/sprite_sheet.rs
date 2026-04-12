@@ -18,15 +18,15 @@ impl SpriteProcessor for SpritesheetSprite {
         let mut result = ctx.layer_info.clone();
         let name = ctx.layer_info.get("name").and_then(|v| v.as_str()).unwrap_or("unnamed");
 
-        // Find the group in the PSD that matches this sprite
-        let group_entry = psd.groups().iter().find(|(_, g)| {
-            parse_layer_name(g.name())
-                .map(|p| p.name == name)
-                .unwrap_or(false)
-        });
-
-        let (_gid, _group) = match group_entry {
-            Some((&id, g)) => (id, g),
+        // Find the group — prefer the ID passed via context, fall back to name search
+        let gid = match ctx.group_id.or_else(|| {
+            psd.groups().iter().find(|(_, g)| {
+                parse_layer_name(g.name())
+                    .map(|p| p.name == name)
+                    .unwrap_or(false)
+            }).map(|(&id, _)| id)
+        }) {
+            Some(id) => id,
             None => {
                 result.insert("note".into(), Value::String("Spritesheet group not found".into()));
                 return Ok(result);
@@ -39,8 +39,6 @@ impl SpriteProcessor for SpritesheetSprite {
         let mut max_width: u32 = 0;
         let mut max_height: u32 = 0;
         let mut seen_names = std::collections::HashSet::new();
-
-        let gid = _gid;
         if let Some(sub_layers) = psd.get_group_sub_layers(&gid) {
             for child in sub_layers.iter() {
                 if !child.visible() {
