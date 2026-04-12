@@ -1,0 +1,266 @@
+{
+  "height": 560,
+  "layers": [
+    {
+      "category": "group",
+      "children": [
+        {
+          "category": "tileset",
+          "columns": 2,
+          "filetype": "png",
+          "height": 561,
+          "initialDepth": 11,
+          "name": "background",
+          "rows": 2,
+          "width": 804,
+          "x": -1,
+          "y": -1
+        },
+        {
+          "category": "sprite",
+          "filePath": "sprites/threeLetters.png",
+          "frames": {
+            "2": {
+              "height": 93,
+              "width": 84,
+              "x": 91,
+              "y": 0
+            },
+            "P1": {
+              "height": 86,
+              "width": 91,
+              "x": 0,
+              "y": 0
+            },
+            "P2": {
+              "height": 115,
+              "width": 64,
+              "x": 175,
+              "y": 0
+            }
+          },
+          "height": 460,
+          "initialDepth": 10,
+          "instances": [
+            {
+              "name": "P1",
+              "x": 651,
+              "y": 239
+            },
+            {
+              "name": "2",
+              "x": 260,
+              "y": 412
+            },
+            {
+              "name": "P2",
+              "x": 82,
+              "y": 44
+            }
+          ],
+          "name": "threeLetters",
+          "type": "atlas",
+          "width": 659,
+          "x": 82,
+          "y": 44
+        },
+        {
+          "attributes": {
+            "hidden": true
+          },
+          "category": "sprite",
+          "columns": 3,
+          "filePath": "sprites/seeds.png",
+          "frame_count": 6,
+          "frame_height": 51,
+          "frame_width": 86,
+          "frames": {
+            "bluemagenta": {
+              "height": 33,
+              "width": 86,
+              "x": 172,
+              "y": 0
+            },
+            "orange": {
+              "height": 34,
+              "width": 34,
+              "x": 0,
+              "y": 51
+            },
+            "pinkdotted": {
+              "height": 45,
+              "width": 31,
+              "x": 172,
+              "y": 51
+            },
+            "pinkyellow": {
+              "height": 51,
+              "width": 78,
+              "x": 86,
+              "y": 0
+            },
+            "rainbow": {
+              "height": 48,
+              "width": 53,
+              "x": 86,
+              "y": 51
+            },
+            "red": {
+              "height": 36,
+              "width": 44,
+              "x": 0,
+              "y": 0
+            }
+          },
+          "height": 156,
+          "initialDepth": 9,
+          "instances": [
+            {
+              "name": "red",
+              "x": 615,
+              "y": 393
+            },
+            {
+              "name": "pinkyellow",
+              "x": 680,
+              "y": 381
+            },
+            {
+              "name": "bluemagenta",
+              "x": 644,
+              "y": 447
+            },
+            {
+              "name": "orange",
+              "x": 620,
+              "y": 504
+            },
+            {
+              "name": "rainbow",
+              "x": 730,
+              "y": 480
+            },
+            {
+              "name": "pinkdotted",
+              "x": 668,
+              "y": 489
+            }
+          ],
+          "name": "seeds",
+          "rows": 2,
+          "type": "spritesheet",
+          "width": 167,
+          "x": 615,
+          "y": 381
+        },
+        {
+          "category": "group",
+          "children": [
+            {
+              "category": "sprite",
+              "filePath": "sprites/combined.png",
+              "height": 315,
+              "initialDepth": 7,
+              "name": "combined",
+              "width": 304,
+              "x": 73,
+              "y": 42
+            },
+            {
+              "category": "sprite",
+              "filePath": "sprites/bushy.png",
+              "height": 103,
+              "initialDepth": 6,
+              "name": "bushy",
+              "width": 105,
+              "x": 625,
+              "y": 56
+            },
+            {
+              "category": "sprite",
+              "filePath": "sprites/moldy.png",
+              "height": 77,
+              "initialDepth": 5,
+              "name": "moldy",
+              "width": 70,
+              "x": 282,
+              "y": 242
+            },
+            {
+              "category": "sprite",
+              "filePath": "sprites/looped.png",
+              "height": 92,
+              "initialDepth": 4,
+              "name": "looped",
+              "width": 97,
+              "x": 441,
+              "y": 62
+            }
+          ],
+          "height": 315,
+          "initialDepth": 8,
+          "name": "blobs",
+          "width": 656,
+          "x": 73,
+          "y": 42
+        },
+        {
+          "alpha": 0.6,
+          "category": "sprite",
+          "filePath": "sprites/grid.png",
+          "height": 537,
+          "initialDepth": 3,
+          "mask": true,
+          "maskHeight": 560,
+          "maskPath": "sprites/grid_mask.png",
+          "maskWidth": 1000,
+          "maskX": -99,
+          "maskY": 2,
+          "name": "grid",
+          "width": 775,
+          "x": 14,
+          "y": 13
+        },
+        {
+          "category": "sprite",
+          "filePath": "sprites/pinkStem.png",
+          "height": 200,
+          "initialDepth": 2,
+          "name": "pinkStem",
+          "width": 122,
+          "x": 441,
+          "y": 308
+        },
+        {
+          "category": "tileset",
+          "columns": 2,
+          "filetype": "png",
+          "height": 536,
+          "initialDepth": 1,
+          "name": "scribble",
+          "rows": 2,
+          "width": 803,
+          "x": 0,
+          "y": 0
+        },
+        {
+          "category": "point",
+          "initialDepth": 0,
+          "name": "emitPoint",
+          "x": 680.5,
+          "y": 108.0
+        }
+      ],
+      "height": 561,
+      "initialDepth": 12,
+      "name": "root",
+      "width": 804,
+      "x": -1,
+      "y": -1
+    }
+  ],
+  "name": "test-psd",
+  "tile_scaled_versions": [],
+  "tile_slice_size": 512,
+  "width": 803
+}
