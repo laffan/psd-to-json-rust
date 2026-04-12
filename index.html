@@ -33,6 +33,57 @@
       Process PSD
     </button>
 
+    <div class="sidebar-divider"></div>
+
+    <!-- Options -->
+    <div class="sidebar-section options-section">
+      <button class="options-toggle" id="options-toggle">
+        <span class="options-arrow">&#9654;</span> Options
+      </button>
+      <div class="options-body" id="options-body">
+
+        <div class="option-group">
+          <label for="opt-tile-size">Tile Slice Size</label>
+          <input type="number" id="opt-tile-size" class="opt-input" value="512" min="32" step="1" />
+        </div>
+
+        <div class="option-group">
+          <label for="opt-tile-scales">Tile Scaled Versions</label>
+          <input type="text" id="opt-tile-scales" class="opt-input" value="" placeholder="e.g. 256, 128" />
+          <span class="opt-hint">Comma-separated pixel sizes</span>
+        </div>
+
+        <div class="option-group">
+          <label>PNG Quality Range</label>
+          <div class="opt-row">
+            <input type="number" id="opt-png-low" class="opt-input opt-half" value="45" min="0" max="100" />
+            <span class="opt-sep">&ndash;</span>
+            <input type="number" id="opt-png-high" class="opt-input opt-half" value="65" min="0" max="100" />
+          </div>
+        </div>
+
+        <div class="option-group">
+          <label for="opt-jpg-quality">JPG Quality</label>
+          <input type="number" id="opt-jpg-quality" class="opt-input" value="85" min="0" max="100" />
+        </div>
+
+        <div class="option-group">
+          <label for="opt-ignore">Ignore Layers</label>
+          <input type="text" id="opt-ignore" class="opt-input" value="" placeholder="e.g. draft, reference" />
+          <span class="opt-hint">Comma-separated layer names</span>
+        </div>
+
+        <div class="option-group opt-check-group">
+          <label class="opt-checkbox-label">
+            <input type="checkbox" id="opt-metadata-only" />
+            Metadata only
+          </label>
+          <span class="opt-hint">Skip image export, generate JSON only</span>
+        </div>
+
+      </div>
+    </div>
+
     <div class="sidebar-spacer"></div>
 
     <div class="status-bar" id="status-bar">Ready</div>

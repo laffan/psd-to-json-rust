@@ -130,6 +130,138 @@ html, body {
   border-top: 1px solid var(--border);
 }
 
+/* ── Sidebar Options ────────────────────────────── */
+.sidebar-divider {
+  border-top: 1px solid var(--border);
+}
+
+.options-section {
+  gap: 0 !important;
+}
+
+.options-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  padding: 0;
+  transition: color var(--transition);
+}
+
+.options-toggle:hover { color: var(--text); }
+
+.options-arrow {
+  display: inline-block;
+  font-size: 9px;
+  transition: transform var(--transition);
+}
+
+.options-arrow.open {
+  transform: rotate(90deg);
+}
+
+.options-body {
+  display: none;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 12px;
+  overflow-y: auto;
+  max-height: 45vh;
+}
+
+.options-body.open {
+  display: flex;
+}
+
+.option-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.option-group > label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.opt-input {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+  font-size: 12px;
+  padding: 6px 8px;
+  outline: none;
+  transition: border-color var(--transition);
+}
+
+.opt-input:focus {
+  border-color: var(--accent);
+}
+
+.opt-input::placeholder {
+  color: #4a4a6a;
+}
+
+/* Number inputs: hide spinner in WebKit */
+.opt-input[type="number"]::-webkit-inner-spin-button,
+.opt-input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.opt-input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+.opt-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.opt-half {
+  flex: 1;
+  min-width: 0;
+}
+
+.opt-sep {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.opt-hint {
+  font-size: 10px;
+  color: #4a4a6a;
+}
+
+.opt-check-group {
+  flex-direction: row;
+  flex-wrap: wrap;
+}
+
+.opt-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px !important;
+  color: var(--text) !important;
+  cursor: pointer;
+}
+
+.opt-checkbox-label input[type="checkbox"] {
+  accent-color: var(--accent);
+  width: 14px;
+  height: 14px;
+}
+
 /* ── Main Content ──────────────────────────────── */
 .content {
   flex: 1;

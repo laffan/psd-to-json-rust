@@ -63,10 +63,22 @@ struct Selections {
     output_dir: Option<String>,
 }
 
+/// Options sent from the frontend sidebar.
+#[derive(Deserialize, Clone)]
+struct ProcessOptions {
+    tile_slice_size: Option<u32>,
+    tile_scaled_versions: Option<Vec<u32>>,
+    png_quality_low: Option<u8>,
+    png_quality_high: Option<u8>,
+    jpg_quality: Option<u8>,
+    ignore_layers: Option<Vec<String>>,
+    metadata_only: Option<bool>,
+}
+
 /// Run the PSD processing. Emits `log-line` events to the frontend for
 /// terminal output, and returns the JSON result on success.
 #[tauri::command]
-async fn process_psd(app: tauri::AppHandle, state: State<'_, AppState>) -> Result<String, String> {
+async fn process_psd(app: tauri::AppHandle, state: State<'_, AppState>, options: ProcessOptions) -> Result<String, String> {
     let psd_path = state
         .psd_path
         .lock()
@@ -85,20 +97,20 @@ async fn process_psd(app: tauri::AppHandle, state: State<'_, AppState>) -> Resul
 
     emit_log(&app, &format!("Starting processing: {}", psd_path_str));
 
-    // Build a config on the fly
+    // Build config from frontend options
     let config = psd_to_json::Config {
         output_dir: output_dir_str.clone(),
         psd_files: vec![psd_path_str.clone()],
-        tile_slice_size: 512,
-        tile_scaled_versions: vec![],
+        tile_slice_size: options.tile_slice_size.unwrap_or(512),
+        tile_scaled_versions: options.tile_scaled_versions.clone().unwrap_or_default(),
         generate_on_save: false,
         png_quality_range: psd_to_json::config::PngQualityRange {
-            low: 45,
-            high: 65,
+            low: options.png_quality_low.unwrap_or(45),
+            high: options.png_quality_high.unwrap_or(65),
         },
-        jpg_quality: 85,
-        ignore_layers: vec![],
-        metadata_only: false,
+        jpg_quality: options.jpg_quality.unwrap_or(85),
+        ignore_layers: options.ignore_layers.clone().unwrap_or_default(),
+        metadata_only: options.metadata_only.unwrap_or(false),
     };
 
     // Run processing in a blocking thread so we don't stall the async runtime.

@@ -18,6 +18,25 @@ const statusBar = document.getElementById("status-bar");
 const thumbnailGrid = document.getElementById("thumbnail-grid");
 const thumbnailEmpty = document.getElementById("thumbnail-empty");
 
+// Option inputs
+const optTileSize = document.getElementById("opt-tile-size");
+const optTileScales = document.getElementById("opt-tile-scales");
+const optPngLow = document.getElementById("opt-png-low");
+const optPngHigh = document.getElementById("opt-png-high");
+const optJpgQuality = document.getElementById("opt-jpg-quality");
+const optIgnore = document.getElementById("opt-ignore");
+const optMetadataOnly = document.getElementById("opt-metadata-only");
+
+// ── Options toggle ─────────────────────────────────────────
+const optionsToggle = document.getElementById("options-toggle");
+const optionsBody = document.getElementById("options-body");
+const optionsArrow = optionsToggle.querySelector(".options-arrow");
+
+optionsToggle.addEventListener("click", () => {
+  const isOpen = optionsBody.classList.toggle("open");
+  optionsArrow.classList.toggle("open", isOpen);
+});
+
 // ── Tab switching ──────────────────────────────────────────
 document.querySelectorAll(".tab-btn").forEach((btn) => {
   btn.addEventListener("click", () => {
@@ -80,7 +99,7 @@ btnProcess.addEventListener("click", async () => {
   logLine("info", "Starting PSD processing...");
 
   try {
-    await invoke("process_psd");
+    await invoke("process_psd", { options: gatherOptions() });
     logLine("success", "Processing complete!");
     statusBar.textContent = "Done";
 
@@ -270,6 +289,30 @@ function logLine(cls, text) {
   line.textContent = text;
   terminal.appendChild(line);
   terminal.scrollTop = terminal.scrollHeight;
+}
+
+function gatherOptions() {
+  // Parse tile scaled versions: comma-separated numbers
+  const scalesRaw = optTileScales.value.trim();
+  const tileScaledVersions = scalesRaw
+    ? scalesRaw.split(",").map((s) => parseInt(s.trim(), 10)).filter((n) => !isNaN(n) && n > 0)
+    : [];
+
+  // Parse ignore layers: comma-separated names
+  const ignoreRaw = optIgnore.value.trim();
+  const ignoreLayers = ignoreRaw
+    ? ignoreRaw.split(",").map((s) => s.trim()).filter((s) => s.length > 0)
+    : [];
+
+  return {
+    tile_slice_size: parseInt(optTileSize.value, 10) || 512,
+    tile_scaled_versions: tileScaledVersions,
+    png_quality_low: parseInt(optPngLow.value, 10) || 45,
+    png_quality_high: parseInt(optPngHigh.value, 10) || 65,
+    jpg_quality: parseInt(optJpgQuality.value, 10) || 85,
+    ignore_layers: ignoreLayers,
+    metadata_only: optMetadataOnly.checked,
+  };
 }
 
 function updateProcessButton() {
