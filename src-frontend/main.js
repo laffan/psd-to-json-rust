@@ -6,6 +6,7 @@ import { open } from "@tauri-apps/plugin-dialog";
 let psdSelected = false;
 let outputSelected = false;
 let processing = false;
+let isMobile = false; // set during init
 
 // ── DOM refs ───────────────────────────────────────────────
 const btnSelectPsd = document.getElementById("btn-select-psd");
@@ -37,6 +38,27 @@ optionsToggle.addEventListener("click", () => {
   optionsArrow.classList.toggle("open", isOpen);
 });
 
+// ── Init: detect mobile and auto-set output dir ───────────
+(async () => {
+  try {
+    const defaultDir = await invoke("get_default_output_dir");
+    if (defaultDir) {
+      // Mobile: auto-set output dir to app sandbox
+      isMobile = true;
+      await invoke("set_output_dir", { path: defaultDir });
+      outputPathDisplay.textContent = "App Documents";
+      outputPathDisplay.classList.add("has-value");
+      outputSelected = true;
+      btnSelectOutput.textContent = "App Documents";
+      btnSelectOutput.disabled = true;
+      btnSelectOutput.classList.add("btn-disabled");
+      updateProcessButton();
+    }
+  } catch (e) {
+    console.error("Init error:", e);
+  }
+})();
+
 // ── Tab switching ──────────────────────────────────────────
 document.querySelectorAll(".tab-btn").forEach((btn) => {
   btn.addEventListener("click", () => {
@@ -56,6 +78,7 @@ btnSelectPsd.addEventListener("click", async () => {
   const path = await open({
     multiple: false,
     filters: [{ name: "Photoshop", extensions: ["psd"] }],
+    pickerMode: "document",
   });
   if (path) {
     try {
@@ -73,7 +96,7 @@ btnSelectPsd.addEventListener("click", async () => {
 
 // ── Select Output Dir ──────────────────────────────────────
 btnSelectOutput.addEventListener("click", async () => {
-  const path = await open({ directory: true });
+  const path = await open({ directory: true, pickerMode: "document" });
   if (path) {
     try {
       const display = await invoke("set_output_dir", { path });

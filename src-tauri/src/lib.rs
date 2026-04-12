@@ -295,6 +295,26 @@ fn collect_image_files(dir: &Path, base: &Path, out: &mut Vec<OutputFile>) {
     }
 }
 
+/// Return the default output directory path.
+/// On iOS this is the app's document directory (sandbox); on desktop it returns
+/// an empty string so the frontend can show the folder picker instead.
+#[tauri::command]
+fn get_default_output_dir(app: tauri::AppHandle) -> Result<String, String> {
+    use tauri::Manager;
+    if cfg!(target_os = "ios") || cfg!(target_os = "android") {
+        let doc_dir = app
+            .path()
+            .document_dir()
+            .map_err(|e| format!("Failed to resolve document dir: {}", e))?;
+        let output = doc_dir.join("psd-to-json-output");
+        std::fs::create_dir_all(&output)
+            .map_err(|e| format!("Failed to create output dir: {}", e))?;
+        Ok(output.display().to_string())
+    } else {
+        Ok(String::new())
+    }
+}
+
 fn emit_log(app: &tauri::AppHandle, message: &str) {
     let _ = app.emit("log-line", message.to_string());
 }
@@ -312,6 +332,7 @@ fn build_app() -> tauri::Builder<tauri::Wry> {
             set_psd_path,
             set_output_dir,
             get_selections,
+            get_default_output_dir,
             process_psd,
             list_output_files,
             get_thumbnail,
