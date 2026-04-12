@@ -132,10 +132,12 @@ fn process_layers(
                         process_zone(&mut layer_info, layer, psd.width(), psd.height());
                     }
                     "tileset" => {
-                        let tile_info = tiles::process_tiles(layer, &layer_info, config, psd_output_dir, psd)?;
-                        // Merge tile_info into layer_info
-                        for (k, v) in tile_info {
-                            layer_info.insert(k, v);
+                        // Single pixel-layer tileset
+                        if let Some(tile_image) = crate::types::sprite::layer_to_cropped_image(layer, psd.width(), psd.height()) {
+                            let tile_info = tiles::process_tiles(&tile_image, &layer_info, config, psd_output_dir, Some(layer))?;
+                            for (k, v) in tile_info {
+                                layer_info.insert(k, v);
+                            }
                         }
                     }
                     "sprite" => {
@@ -224,6 +226,22 @@ fn process_layers(
                         }
                         Err(e) => {
                             layer_info.insert("note".into(), Value::String(format!("Sprite processing error: {}", e)));
+                        }
+                    }
+                }
+
+                // Handle tileset groups (T | name | type)
+                if parsed.category == "tileset" {
+                    if let Some((composite, _cx, _cy)) = tiles::composite_group(*gid, psd) {
+                        match tiles::process_tiles(&composite, &layer_info, config, psd_output_dir, None) {
+                            Ok(tile_info) => {
+                                for (k, v) in tile_info {
+                                    layer_info.insert(k, v);
+                                }
+                            }
+                            Err(e) => {
+                                layer_info.insert("note".into(), Value::String(format!("Tile processing error: {}", e)));
+                            }
                         }
                     }
                 }

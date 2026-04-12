@@ -2,20 +2,23 @@ use anyhow::Result;
 use image::{RgbaImage, RgbImage};
 use serde_json::{Map, Value};
 
-use super::sprite::{layer_to_cropped_image, export_mask};
+use super::sprite::layer_to_cropped_image;
 use crate::config::Config;
 use crate::export::image_export;
 use rayon::prelude::*;
 use std::path::Path;
 
-/// Process a tileset layer: slice the layer image into a grid of tiles,
-/// optionally creating scaled versions.
+/// Process a tileset: slice an image into a grid of tiles, optionally
+/// creating scaled versions.
+///
+/// `tile_image` is the fully-composited RGBA image to slice.
+/// If `mask_layer` is provided, its raster mask is exported too.
 pub fn process_tiles(
-    layer: &psd::PsdLayer,
+    tile_image: &RgbaImage,
     layer_info: &Map<String, Value>,
     config: &Config,
     output_dir: &Path,
-    psd: &psd::Psd,
+    mask_layer: Option<&psd::PsdLayer>,
 ) -> Result<Map<String, Value>> {
     let mut result = layer_info.clone();
 
@@ -23,8 +26,7 @@ pub fn process_tiles(
     let tile_type = layer_info.get("type").and_then(|v| v.as_str()).unwrap_or("");
     let is_jpg = tile_type.eq_ignore_ascii_case("jpg");
 
-    let lw = layer.width() as u32;
-    let lh = layer.height() as u32;
+    let (lw, lh) = tile_image.dimensions();
 
     let tile_size = config.tile_slice_size;
     let num_tiles_x = (lw + tile_size - 1) / tile_size;
@@ -34,18 +36,14 @@ pub fn process_tiles(
     result.insert("rows".into(), Value::from(num_tiles_y));
     result.insert("filetype".into(), Value::String(if is_jpg { "jpg" } else { "png" }.into()));
 
-    // Export mask
-    export_mask(layer, &mut result, output_dir, "masks", name, config.metadata_only)?;
+    // Export mask if a source layer was provided
+    if let Some(layer) = mask_layer {
+        super::sprite::export_mask(layer, &mut result, output_dir, "masks", name, config.metadata_only)?;
+    }
 
     if config.metadata_only {
         return Ok(result);
     }
-
-    // Get the composited layer image
-    let tile_image = match layer_to_cropped_image(layer, psd.width(), psd.height()) {
-        Some(img) => img,
-        None => return Ok(result),
-    };
 
     let tiles_base_dir = output_dir.join("tiles").join(name);
     let tiles_dir = tiles_base_dir.join(tile_size.to_string());
@@ -71,7 +69,7 @@ pub fn process_tiles(
             return Ok(());
         }
 
-        let tile = image::imageops::crop_imm(&tile_image, left, top_coord, tw, th).to_image();
+        let tile = image::imageops::crop_imm(tile_image, left, top_coord, tw, th).to_image();
 
         let tile_filename = if is_jpg {
             format!("{}_tile_{}_{}.jpg", name, tx, ty)
@@ -135,4 +133,77 @@ fn rgba_to_rgb(rgba: &RgbaImage) -> RgbImage {
         }
     }
     rgb
+}
+
+/// Composite all visible direct children of a group into a single RGBA image.
+/// Returns the image and its top-left origin in PSD coordinates.
+pub fn composite_group(
+    gid: u32,
+    psd: &psd::Psd,
+) -> Option<(RgbaImage, i32, i32)> {
+    let (top, left, bottom, right) = psd.group_bounds(gid)?;
+    let w = (right - left).max(0) as u32;
+    let h = (bottom - top).max(0) as u32;
+    if w == 0 || h == 0 {
+        return None;
+    }
+
+    let mut merged = RgbaImage::new(w, h);
+    let psd_w = psd.width();
+    let psd_h = psd.height();
+
+    if let Some(sub_layers) = psd.get_group_sub_layers(&gid) {
+        for child in sub_layers.iter() {
+            if !child.visible() {
+                continue;
+            }
+            if let Some(child_img) = layer_to_cropped_image(child, psd_w, psd_h) {
+                let cx = child.layer_left() - left;
+                let cy = child.layer_top() - top;
+                alpha_composite(&mut merged, &child_img, cx, cy);
+            }
+        }
+    }
+
+    Some((merged, left, top))
+}
+
+/// Alpha-composite `src` onto `dst` at position (dx, dy).
+fn alpha_composite(dst: &mut RgbaImage, src: &RgbaImage, dx: i32, dy: i32) {
+    let (sw, sh) = src.dimensions();
+    for sy in 0..sh {
+        for sx in 0..sw {
+            let tx = dx + sx as i32;
+            let ty = dy + sy as i32;
+            if tx < 0 || ty < 0 {
+                continue;
+            }
+            let tx = tx as u32;
+            let ty = ty as u32;
+            if tx >= dst.width() || ty >= dst.height() {
+                continue;
+            }
+
+            let src_px = src.get_pixel(sx, sy);
+            if src_px[3] == 0 {
+                continue;
+            }
+
+            let dst_px = dst.get_pixel(tx, ty);
+            let sa = src_px[3] as f32 / 255.0;
+            let da = dst_px[3] as f32 / 255.0;
+            let out_a = sa + da * (1.0 - sa);
+
+            if out_a == 0.0 {
+                continue;
+            }
+
+            let r = ((src_px[0] as f32 * sa + dst_px[0] as f32 * da * (1.0 - sa)) / out_a) as u8;
+            let g = ((src_px[1] as f32 * sa + dst_px[1] as f32 * da * (1.0 - sa)) / out_a) as u8;
+            let b = ((src_px[2] as f32 * sa + dst_px[2] as f32 * da * (1.0 - sa)) / out_a) as u8;
+            let a = (out_a * 255.0) as u8;
+
+            dst.put_pixel(tx, ty, image::Rgba([r, g, b, a]));
+        }
+    }
 }
