@@ -1,0 +1,193 @@
+import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
+import { open } from "@tauri-apps/plugin-dialog";
+
+// ── State ──────────────────────────────────────────────────
+let psdSelected = false;
+let outputSelected = false;
+let processing = false;
+
+// ── DOM refs ───────────────────────────────────────────────
+const btnSelectPsd = document.getElementById("btn-select-psd");
+const btnSelectOutput = document.getElementById("btn-select-output");
+const btnProcess = document.getElementById("btn-process");
+const psdPathDisplay = document.getElementById("psd-path-display");
+const outputPathDisplay = document.getElementById("output-path-display");
+const terminal = document.getElementById("terminal");
+const statusBar = document.getElementById("status-bar");
+const thumbnailGrid = document.getElementById("thumbnail-grid");
+const thumbnailEmpty = document.getElementById("thumbnail-empty");
+
+// ── Tab switching ──────────────────────────────────────────
+document.querySelectorAll(".tab-btn").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".tab-btn").forEach((b) => b.classList.remove("active"));
+    document.querySelectorAll(".tab-panel").forEach((p) => p.classList.remove("active"));
+    btn.classList.add("active");
+    document.getElementById("panel-" + btn.dataset.tab).classList.add("active");
+
+    if (btn.dataset.tab === "thumbnails") {
+      refreshThumbnails();
+    }
+  });
+});
+
+// ── Select PSD ─────────────────────────────────────────────
+btnSelectPsd.addEventListener("click", async () => {
+  const path = await open({
+    multiple: false,
+    filters: [{ name: "Photoshop", extensions: ["psd"] }],
+  });
+  if (path) {
+    try {
+      const name = await invoke("set_psd_path", { path });
+      psdPathDisplay.textContent = name;
+      psdPathDisplay.classList.add("has-value");
+      psdSelected = true;
+      updateProcessButton();
+      logLine("info", `PSD selected: ${path}`);
+    } catch (e) {
+      logLine("error", `Error: ${e}`);
+    }
+  }
+});
+
+// ── Select Output Dir ──────────────────────────────────────
+btnSelectOutput.addEventListener("click", async () => {
+  const path = await open({ directory: true });
+  if (path) {
+    try {
+      const display = await invoke("set_output_dir", { path });
+      outputPathDisplay.textContent = display;
+      outputPathDisplay.classList.add("has-value");
+      outputSelected = true;
+      updateProcessButton();
+      logLine("info", `Output directory: ${path}`);
+    } catch (e) {
+      logLine("error", `Error: ${e}`);
+    }
+  }
+});
+
+// ── Process ────────────────────────────────────────────────
+btnProcess.addEventListener("click", async () => {
+  if (processing) return;
+  processing = true;
+  updateProcessButton();
+  statusBar.textContent = "Processing...";
+
+  terminal.innerHTML = "";
+  logLine("info", "Starting PSD processing...");
+
+  try {
+    await invoke("process_psd");
+    logLine("success", "Processing complete!");
+    statusBar.textContent = "Done";
+
+    // Auto-switch to thumbnails tab
+    document.querySelectorAll(".tab-btn").forEach((b) => b.classList.remove("active"));
+    document.querySelectorAll(".tab-panel").forEach((p) => p.classList.remove("active"));
+    document.querySelector('[data-tab="thumbnails"]').classList.add("active");
+    document.getElementById("panel-thumbnails").classList.add("active");
+    refreshThumbnails();
+  } catch (e) {
+    logLine("error", `Processing failed: ${e}`);
+    statusBar.textContent = "Error";
+  } finally {
+    processing = false;
+    updateProcessButton();
+  }
+});
+
+// ── Log events from backend ────────────────────────────────
+listen("log-line", (event) => {
+  const msg = event.payload;
+  let cls = "info";
+  const lower = msg.toLowerCase();
+  if (lower.includes("error") || lower.includes("fail")) {
+    cls = "error";
+  } else if (lower.includes("done") || lower.includes("complete") || lower.includes("finished")) {
+    cls = "success";
+  } else if (msg.startsWith("{") || msg.startsWith("[")) {
+    cls = "data";
+  }
+  logLine(cls, msg);
+});
+
+// ── Thumbnail refresh ──────────────────────────────────────
+async function refreshThumbnails() {
+  try {
+    const files = await invoke("list_output_files");
+    if (!files || files.length === 0) {
+      thumbnailGrid.style.display = "none";
+      thumbnailEmpty.style.display = "flex";
+      return;
+    }
+
+    thumbnailGrid.style.display = "grid";
+    thumbnailEmpty.style.display = "none";
+    thumbnailGrid.innerHTML = "";
+
+    for (const file of files) {
+      const card = document.createElement("div");
+      card.className = "thumb-card";
+
+      const imgWrap = document.createElement("div");
+      imgWrap.className = "thumb-img-wrap";
+
+      if (file.is_json) {
+        const icon = document.createElement("div");
+        icon.className = "thumb-json-icon";
+        icon.textContent = "{ }";
+        imgWrap.appendChild(icon);
+      } else {
+        const img = document.createElement("img");
+        img.alt = file.filename;
+        img.loading = "lazy";
+        loadThumb(file.absolute_path, img);
+        imgWrap.appendChild(img);
+      }
+
+      const label = document.createElement("div");
+      label.className = "thumb-label";
+
+      const parts = file.relative_path.split("/");
+      const dir = parts.length > 1 ? parts.slice(0, -1).join("/") : "";
+      label.innerHTML = `${file.filename}${dir ? `<span class="thumb-dir">${dir}</span>` : ""}`;
+
+      card.appendChild(imgWrap);
+      card.appendChild(label);
+      thumbnailGrid.appendChild(card);
+    }
+  } catch (e) {
+    console.error("Thumbnail refresh error:", e);
+  }
+}
+
+async function loadThumb(absolutePath, imgEl) {
+  try {
+    const dataUrl = await invoke("get_thumbnail", { path: absolutePath, maxSize: 200 });
+    imgEl.src = dataUrl;
+  } catch (e) {
+    imgEl.alt = "Error";
+  }
+}
+
+// ── Helpers ────────────────────────────────────────────────
+function logLine(cls, text) {
+  const line = document.createElement("div");
+  line.className = `line ${cls}`;
+  line.textContent = text;
+  terminal.appendChild(line);
+  terminal.scrollTop = terminal.scrollHeight;
+}
+
+function updateProcessButton() {
+  const canProcess = psdSelected && outputSelected && !processing;
+  btnProcess.disabled = !canProcess;
+  if (processing) {
+    btnProcess.innerHTML = '<span class="spinner"></span> Processing...';
+  } else {
+    btnProcess.textContent = "Process PSD";
+  }
+}

@@ -5,11 +5,6 @@
   "permissions": [
     "core:default",
     "dialog:default",
-    "dialog:allow-open",
-    "fs:default",
-    "fs:allow-read",
-    "fs:allow-exists",
-    "fs:read-all",
-    "fs:scope-home"
+    "dialog:allow-open"
   ]
 }

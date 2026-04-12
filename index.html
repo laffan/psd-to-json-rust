@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PSD to JSON</title>
+  <link rel="stylesheet" href="/src-frontend/styles.css" />
+</head>
+<body>
+
+<div class="app">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <h1>PSD to JSON</h1>
+
+    <div class="sidebar-section">
+      <label>PSD File</label>
+      <div class="file-select">
+        <button class="btn btn-browse" id="btn-select-psd">Select PSD...</button>
+        <div class="path-display" id="psd-path-display">No file selected</div>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <label>Output Directory</label>
+      <div class="file-select">
+        <button class="btn btn-browse" id="btn-select-output">Select Folder...</button>
+        <div class="path-display" id="output-path-display">No folder selected</div>
+      </div>
+    </div>
+
+    <button class="btn btn-process" id="btn-process" disabled>
+      Process PSD
+    </button>
+
+    <div class="sidebar-spacer"></div>
+
+    <div class="status-bar" id="status-bar">Ready</div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="content">
+    <div class="tab-bar">
+      <button class="tab-btn active" data-tab="terminal">Terminal</button>
+      <button class="tab-btn" data-tab="thumbnails">Output</button>
+    </div>
+
+    <!-- Terminal Tab -->
+    <div class="tab-panel active" id="panel-terminal">
+      <div class="terminal" id="terminal">
+        <div class="line welcome">Select a PSD file and output directory, then click "Process PSD" to begin.</div>
+      </div>
+    </div>
+
+    <!-- Thumbnails Tab -->
+    <div class="tab-panel" id="panel-thumbnails">
+      <div class="thumbnail-container" id="thumbnail-container">
+        <div class="thumbnail-empty" id="thumbnail-empty">
+          No output files yet. Process a PSD to see results here.
+        </div>
+        <div class="thumbnail-grid" id="thumbnail-grid" style="display:none;"></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script type="module" src="/src-frontend/main.js"></script>
+
+</body>
+</html>

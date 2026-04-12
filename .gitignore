@@ -4,4 +4,5 @@ Cargo.lock
 *.psd
 node_modules
 package-lock.json
+dist
 src-tauri/gen/

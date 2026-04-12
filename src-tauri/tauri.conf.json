@@ -4,10 +4,13 @@
   "version": "0.1.0",
   "identifier": "com.psd-to-json.app",
   "build": {
-    "frontendDist": "../ui"
+    "devUrl": "http://localhost:1420",
+    "frontendDist": "../dist",
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build"
   },
   "app": {
-    "withGlobalTauri": true,
+    "withGlobalTauri": false,
     "windows": [
       {
         "title": "PSD to JSON",
@@ -28,14 +31,5 @@
       "icons/128x128.png",
       "icons/256x256.png"
     ]
-  },
-  "plugins": {
-    "dialog": {},
-    "fs": {
-      "scope": {
-        "allow": ["**"],
-        "require": ["**"]
-      }
-    }
   }
 }
