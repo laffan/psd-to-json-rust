@@ -1,3 +1,7 @@
 /target
+/src-tauri/target
 Cargo.lock
 *.psd
+node_modules
+package-lock.json
+src-tauri/gen/

@@ -1,3 +1,6 @@
+[workspace]
+members = ["src-tauri"]
+
 [package]
 name = "psd-to-json"
 version = "0.1.0"
