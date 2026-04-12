@@ -12,12 +12,21 @@ struct AppState {
 
 // ── Tauri Commands ──────────────────────────────────────────────────
 
+/// Strip `file://` URL prefix to get a plain filesystem path.
+/// iOS document picker returns paths like `file:///private/var/...`
+fn normalize_path(path: &str) -> PathBuf {
+    let stripped = path
+        .strip_prefix("file://")
+        .unwrap_or(path);
+    PathBuf::from(stripped)
+}
+
 /// Set the selected PSD file path (called from frontend after dialog).
 #[tauri::command]
 fn set_psd_path(state: State<AppState>, path: String) -> Result<String, String> {
-    let p = PathBuf::from(&path);
+    let p = normalize_path(&path);
     if !p.exists() {
-        return Err(format!("File not found: {}", path));
+        return Err(format!("File not found: {}", p.display()));
     }
     let name = p
         .file_name()
@@ -31,7 +40,7 @@ fn set_psd_path(state: State<AppState>, path: String) -> Result<String, String> 
 /// Set the output directory path.
 #[tauri::command]
 fn set_output_dir(state: State<AppState>, path: String) -> Result<String, String> {
-    let p = PathBuf::from(&path);
+    let p = normalize_path(&path);
     *state.output_dir.lock().unwrap() = Some(p.clone());
     Ok(p.display().to_string())
 }
