@@ -5,4 +5,4 @@ pub mod processor;
 pub mod types;
 
 pub use config::Config;
-pub use processor::{process_all_psds, write_json_output};
+pub use processor::{format_layer_tree, process_all_psds, write_json_output};

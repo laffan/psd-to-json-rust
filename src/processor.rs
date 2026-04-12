@@ -351,6 +351,93 @@ fn reverse_depth(value: &mut Value, max_depth: u32) {
     }
 }
 
+/// Build a tree-diagram string from the processed JSON data for a single PSD.
+///
+/// Example output:
+/// ```text
+/// demo (4096x2048)
+/// ├── [T] background
+/// ├── [G] enemyGroup
+/// │   ├── [P] spawn_01
+/// │   └── [S] enemySprite
+/// └── [S] player (animation)
+/// ```
+pub fn format_layer_tree(psd_data: &Map<String, Value>) -> String {
+    let mut out = String::new();
+
+    let name = psd_data.get("name").and_then(|v| v.as_str()).unwrap_or("unnamed");
+    let w = psd_data.get("width").and_then(|v| v.as_u64()).unwrap_or(0);
+    let h = psd_data.get("height").and_then(|v| v.as_u64()).unwrap_or(0);
+    out.push_str(&format!("{} ({}x{})\n", name, w, h));
+
+    if let Some(Value::Array(layers)) = psd_data.get("layers") {
+        format_tree_nodes(layers, "", &mut out);
+    }
+
+    out
+}
+
+fn format_tree_nodes(nodes: &[Value], prefix: &str, out: &mut String) {
+    let count = nodes.len();
+    for (i, node) in nodes.iter().enumerate() {
+        let obj = match node.as_object() {
+            Some(o) => o,
+            None => continue,
+        };
+
+        let is_last = i == count - 1;
+        let connector = if is_last { "└── " } else { "├── " };
+        let child_prefix = if is_last {
+            format!("{}    ", prefix)
+        } else {
+            format!("{}│   ", prefix)
+        };
+
+        let name = obj.get("name").and_then(|v| v.as_str()).unwrap_or("?");
+        let category = obj.get("category").and_then(|v| v.as_str()).unwrap_or("");
+        let layer_type = obj.get("type").and_then(|v| v.as_str());
+
+        let tag = match category {
+            "group"   => "G",
+            "sprite"  => "S",
+            "tileset" => "T",
+            "point"   => "P",
+            "zone"    => "Z",
+            _         => "?",
+        };
+
+        // Build the display line
+        let mut line = format!("{}{}[{}] {}", prefix, connector, tag, name);
+
+        if let Some(t) = layer_type {
+            line.push_str(&format!(" ({})", t));
+        }
+
+        // Show alpha if present
+        if let Some(alpha) = obj.get("alpha").and_then(|v| v.as_f64()) {
+            line.push_str(&format!("  {}%", (alpha * 100.0).round() as u32));
+        }
+
+        // Show blend mode if present
+        if let Some(bm) = obj.get("blendMode").and_then(|v| v.as_str()) {
+            line.push_str(&format!("  {}", bm));
+        }
+
+        // Show mask indicator
+        if obj.get("mask").and_then(|v| v.as_bool()).unwrap_or(false) {
+            line.push_str("  [mask]");
+        }
+
+        out.push_str(&line);
+        out.push('\n');
+
+        // Recurse into children
+        if let Some(Value::Array(children)) = obj.get("children") {
+            format_tree_nodes(children, &child_prefix, out);
+        }
+    }
+}
+
 /// Write the processed data to JSON files.
 pub fn write_json_output(data: &Map<String, Value>, config: &Config, base_dir: &Path) -> Result<()> {
     let output_dir = base_dir.join(&config.output_dir);

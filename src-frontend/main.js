@@ -100,8 +100,29 @@ btnProcess.addEventListener("click", async () => {
 });
 
 // ── Log events from backend ────────────────────────────────
+let treeBuffer = null; // collects lines between LAYER_TREE_START / END
+
 listen("log-line", (event) => {
   const msg = event.payload;
+
+  // Tree block accumulation
+  if (msg === "LAYER_TREE_START") {
+    treeBuffer = [];
+    return;
+  }
+  if (msg === "LAYER_TREE_END") {
+    if (treeBuffer) {
+      renderTree(treeBuffer);
+    }
+    treeBuffer = null;
+    return;
+  }
+  if (treeBuffer !== null) {
+    treeBuffer.push(msg);
+    return;
+  }
+
+  // Normal log lines
   let cls = "info";
   const lower = msg.toLowerCase();
   if (lower.includes("error") || lower.includes("fail")) {
@@ -171,6 +192,75 @@ async function loadThumb(absolutePath, imgEl) {
   } catch (e) {
     imgEl.alt = "Error";
   }
+}
+
+// ── Tree renderer ─────────────────────────────────────────
+const TAG_COLORS = {
+  G: "#f1c40f", // yellow  — group
+  S: "#2ecc71", // green   — sprite
+  T: "#3498db", // blue    — tileset
+  P: "#e67e22", // orange  — point
+  Z: "#9b59b6", // purple  — zone
+};
+
+function renderTree(lines) {
+  const block = document.createElement("div");
+  block.className = "tree-block";
+
+  for (const raw of lines) {
+    if (raw === "") continue;
+
+    const row = document.createElement("div");
+    row.className = "tree-line";
+
+    // Match the tag pattern: [X]
+    const tagMatch = raw.match(/\[([GSTZP?])\]/);
+    if (tagMatch) {
+      const tagChar = tagMatch[1];
+      const tagIdx = raw.indexOf(tagMatch[0]);
+
+      // Prefix: the tree connectors (├── │ └──)
+      const prefix = raw.slice(0, tagIdx);
+      const prefixSpan = document.createElement("span");
+      prefixSpan.className = "tree-prefix";
+      prefixSpan.textContent = prefix;
+      row.appendChild(prefixSpan);
+
+      // Tag badge
+      const badge = document.createElement("span");
+      badge.className = "tree-tag";
+      badge.textContent = tagChar;
+      badge.style.backgroundColor = TAG_COLORS[tagChar] || "#666";
+      row.appendChild(badge);
+
+      // Rest of the line after the tag
+      const rest = raw.slice(tagIdx + tagMatch[0].length);
+      // Split into name vs annotations (parenthesized type, %, blend, [mask])
+      const nameMatch = rest.match(/^\s*(\S+)(.*)/);
+      if (nameMatch) {
+        const nameSpan = document.createElement("span");
+        nameSpan.className = "tree-name";
+        nameSpan.textContent = " " + nameMatch[1];
+        row.appendChild(nameSpan);
+
+        if (nameMatch[2]) {
+          const annoSpan = document.createElement("span");
+          annoSpan.className = "tree-annotation";
+          annoSpan.textContent = nameMatch[2];
+          row.appendChild(annoSpan);
+        }
+      }
+    } else {
+      // Header line (e.g. "demo (4096x2048)")
+      row.className = "tree-line tree-header";
+      row.textContent = raw;
+    }
+
+    block.appendChild(row);
+  }
+
+  terminal.appendChild(block);
+  terminal.scrollTop = terminal.scrollHeight;
 }
 
 // ── Helpers ────────────────────────────────────────────────

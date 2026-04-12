@@ -156,6 +156,20 @@ async fn process_psd(app: tauri::AppHandle, state: State<'_, AppState>) -> Resul
         let data = psd_to_json::process_all_psds(&config, base_dir)
             .map_err(|e| format!("Processing failed: {}", e))?;
 
+        // Emit the layer tree diagram
+        for (_psd_name, psd_data) in &data {
+            if let Some(obj) = psd_data.as_object() {
+                let tree = psd_to_json::format_layer_tree(obj);
+                emit_log(&app_handle, "");
+                emit_log(&app_handle, "LAYER_TREE_START");
+                for line in tree.lines() {
+                    emit_log(&app_handle, line);
+                }
+                emit_log(&app_handle, "LAYER_TREE_END");
+                emit_log(&app_handle, "");
+            }
+        }
+
         emit_log(&app_handle, "Writing JSON output...");
         psd_to_json::write_json_output(&data, &config, base_dir)
             .map_err(|e| format!("JSON output failed: {}", e))?;

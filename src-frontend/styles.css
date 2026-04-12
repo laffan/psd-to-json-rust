@@ -274,6 +274,57 @@ html, body {
   color: #555a70;
 }
 
+/* ── Layer Tree ─────────────────────────────────── */
+.tree-block {
+  background: #101025;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  margin: 8px 0;
+  font-family: "SF Mono", "Cascadia Code", "Fira Code", "Consolas", monospace;
+  font-size: 13px;
+  line-height: 1.7;
+  overflow-x: auto;
+}
+
+.tree-line {
+  white-space: pre;
+}
+
+.tree-header {
+  color: var(--text);
+  font-weight: 700;
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+.tree-prefix {
+  color: #444a60;
+}
+
+.tree-tag {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  line-height: 18px;
+  text-align: center;
+  font-size: 10px;
+  font-weight: 700;
+  color: #fff;
+  border-radius: 3px;
+  vertical-align: middle;
+}
+
+.tree-name {
+  color: var(--text);
+  font-weight: 500;
+}
+
+.tree-annotation {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
 /* ── Spinner ────────────────────────────────────── */
 .spinner {
   display: inline-block;
