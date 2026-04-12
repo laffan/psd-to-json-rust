@@ -75,9 +75,17 @@ document.querySelectorAll(".tab-btn").forEach((btn) => {
 
 // ── Select PSD ─────────────────────────────────────────────
 btnSelectPsd.addEventListener("click", async () => {
+  // On iOS, using image/* MIME types triggers the photo picker even with
+  // pickerMode "document". Use com.adobe.photoshop-image (the UTType for
+  // PSD files) as the extension on mobile, which the document picker
+  // understands. On desktop, the bare "psd" extension works fine.
+  const filters = isMobile
+    ? [{ name: "Photoshop", extensions: ["com.adobe.photoshop-image"] }]
+    : [{ name: "Photoshop", extensions: ["psd"] }];
+
   const path = await open({
     multiple: false,
-    filters: [{ name: "Photoshop", extensions: ["psd"] }],
+    filters,
     pickerMode: "document",
   });
   if (path) {
