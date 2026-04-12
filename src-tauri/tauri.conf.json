@@ -4,8 +4,7 @@
   "version": "0.1.0",
   "identifier": "com.psd-to-json.app",
   "build": {
-    "frontendDist": "../ui",
-    "devUrl": "http://localhost:1420"
+    "frontendDist": "../ui"
   },
   "app": {
     "withGlobalTauri": true,
