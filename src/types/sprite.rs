@@ -36,6 +36,9 @@ pub fn create_sprite_processor(layer_type: Option<&str>) -> Box<dyn SpriteProces
 
 /// Export a layer's raster mask to a PNG file if it exists.
 /// Modifies `result` in place with mask metadata.
+///
+/// Masks that are entirely white (255) are "reveal all" no-ops and are skipped
+/// to match the Python psd-to-json behaviour.
 pub fn export_mask(
     layer: &psd::PsdLayer,
     result: &mut Map<String, Value>,
@@ -48,6 +51,14 @@ pub fn export_mask(
         Some(m) => m,
         None => return Ok(()),
     };
+
+    // Skip "reveal all" masks (all-white / 255 pixels) — they have no visual
+    // effect and the Python version doesn't include them.
+    if let Some(mask_data) = layer.mask_pixels() {
+        if mask_data.iter().all(|&b| b == 255) {
+            return Ok(());
+        }
+    }
 
     result.insert("mask".into(), Value::Bool(true));
     result.insert("maskX".into(), Value::from(mask.left));

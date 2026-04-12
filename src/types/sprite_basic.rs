@@ -64,10 +64,11 @@ impl BasicSprite {
         let lx = result.get("x").and_then(|v| v.as_i64()).unwrap_or(0) as i32;
         let ly = result.get("y").and_then(|v| v.as_i64()).unwrap_or(0) as i32;
 
-        // If bounds came through as zero (common for groups), compute from group_bounds
+        // If bounds came through as zero (common for groups), compute from group_bounds.
+        // group_bounds returns inclusive bounds: width = (right - left) + 1.
         let (lx, ly, lw, lh) = if lw == 0 || lh == 0 {
             if let Some((top, left, bottom, right)) = psd.group_bounds(gid) {
-                (left, top, (right - left).max(0) as u32, (bottom - top).max(0) as u32)
+                (left, top, ((right - left) + 1).max(0) as u32, ((bottom - top) + 1).max(0) as u32)
             } else {
                 (lx, ly, lw, lh)
             }

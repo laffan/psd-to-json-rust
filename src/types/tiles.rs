@@ -142,8 +142,8 @@ pub fn composite_group(
     psd: &psd::Psd,
 ) -> Option<(RgbaImage, i32, i32)> {
     let (top, left, bottom, right) = psd.group_bounds(gid)?;
-    let w = (right - left).max(0) as u32;
-    let h = (bottom - top).max(0) as u32;
+    let w = ((right - left) + 1).max(0) as u32;
+    let h = ((bottom - top) + 1).max(0) as u32;
     if w == 0 || h == 0 {
         return None;
     }

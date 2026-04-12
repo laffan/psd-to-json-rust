@@ -84,16 +84,16 @@ fn process_layers(
     let all_layers = psd.layers();
     let groups = psd.groups();
 
-    // Collect items at this level: layers with parent_group_id matching, and groups with matching parent
-    // We need to process in reverse order (bottom-to-top in PSD, which is the natural iteration order reversed)
-
-    // Gather layers at this nesting level
-    let mut items_at_level: Vec<LevelItem> = Vec::new();
+    // Gather layers at this nesting level with sort keys for correct interleaving.
+    // Both layers() and group_ids_in_order() are in top-to-bottom visual order.
+    // Pixel layers use their index in the flat layers() array as sort key.
+    // Groups use their contained_layers().start as sort key.
+    let mut items_at_level: Vec<(usize, LevelItem)> = Vec::new();
 
     // Add pixel layers at this level
     for (idx, layer) in all_layers.iter().enumerate() {
         if layer.parent_id() == parent_group_id {
-            items_at_level.push(LevelItem::Layer(idx));
+            items_at_level.push((idx, LevelItem::Layer(idx)));
         }
     }
 
@@ -101,14 +101,15 @@ fn process_layers(
     for &gid in psd.group_ids_in_order() {
         let group = &groups[&gid];
         if group.parent_id() == parent_group_id {
-            items_at_level.push(LevelItem::Group(gid));
+            let sort_key = group.contained_layers().start;
+            items_at_level.push((sort_key, LevelItem::Group(gid)));
         }
     }
 
-    // Process in reverse order to match the Python behavior (bottom-to-top visual stacking)
-    items_at_level.reverse();
+    // Sort by position to interleave layers and groups in correct visual order (top-to-bottom)
+    items_at_level.sort_by_key(|(key, _)| *key);
 
-    for item in &items_at_level {
+    for (_sort_key, item) in &items_at_level {
         match item {
             LevelItem::Layer(idx) => {
                 let layer = &all_layers[*idx];
@@ -167,7 +168,7 @@ fn process_layers(
                 // Capture alpha/opacity
                 capture_layer_properties(layer, &mut layer_info);
 
-                result_layers.push(Value::Object(layer_info));
+                result_layers.push(Value::Object(reorder_keys(layer_info)));
             }
             LevelItem::Group(gid) => {
                 let group = &groups[gid];
@@ -180,9 +181,11 @@ fn process_layers(
                     continue;
                 }
 
-                // For groups, get bounds from group_bounds
+                // For groups, get bounds from group_bounds.
+                // group_bounds returns inclusive (top, left, bottom, right), so
+                // width = (right - left) + 1, height = (bottom - top) + 1.
                 let (x, y, w, h) = if let Some((top, left, bottom, right)) = psd.group_bounds(*gid) {
-                    (left, top, (right - left).max(0), (bottom - top).max(0))
+                    (left, top, ((right - left) + 1).max(0), ((bottom - top) + 1).max(0))
                 } else {
                     (group.layer_left(), group.layer_top(), group.width() as i32, group.height() as i32)
                 };
@@ -201,11 +204,9 @@ fn process_layers(
                     layer_info.insert("type".into(), Value::String(lt.clone()));
                 }
 
-                // Add attributes
-                if !parsed.attributes.is_empty() {
-                    let attrs: Map<String, Value> = parsed.attributes.into_iter().collect();
-                    layer_info.insert("attributes".into(), Value::Object(attrs));
-                }
+                // Always include attributes (empty {} if none)
+                let attrs: Map<String, Value> = parsed.attributes.into_iter().collect();
+                layer_info.insert("attributes".into(), Value::Object(attrs));
 
                 // Handle sprite groups (S | name | type)
                 if parsed.category == "sprite" {
@@ -260,7 +261,7 @@ fn process_layers(
                 // Capture opacity and blend mode from group
                 capture_group_properties(group, &mut layer_info);
 
-                result_layers.push(Value::Object(layer_info));
+                result_layers.push(Value::Object(reorder_keys(layer_info)));
             }
         }
     }
@@ -271,6 +272,80 @@ fn process_layers(
 enum LevelItem {
     Layer(usize),
     Group(u32),
+}
+
+/// Reorder JSON keys to match Python psd-to-json output order.
+///
+/// Key ordering depends on the layer category:
+/// - Groups:  name, category, x, y, width, height, initialDepth, attributes, children
+/// - Points:  name, category, x, y, initialDepth, width, height, attributes
+/// - Others:  name, category, x, y, width, height, attributes, [type-specific], initialDepth, [alpha]
+fn reorder_keys(mut map: Map<String, Value>) -> Map<String, Value> {
+    let category = map.get("category").and_then(|v| v.as_str()).unwrap_or("").to_string();
+    let mut ordered = Map::new();
+
+    // Helper: move key from map to ordered if it exists
+    macro_rules! move_key {
+        ($key:expr) => {
+            if let Some(v) = map.remove($key) {
+                ordered.insert($key.to_string(), v);
+            }
+        };
+    }
+
+    // Common prefix
+    move_key!("name");
+    move_key!("category");
+    move_key!("x");
+    move_key!("y");
+
+    match category.as_str() {
+        "group" => {
+            move_key!("width");
+            move_key!("height");
+            move_key!("initialDepth");
+            move_key!("attributes");
+            move_key!("children");
+        }
+        "point" => {
+            move_key!("initialDepth");
+            move_key!("width");
+            move_key!("height");
+            move_key!("attributes");
+        }
+        _ => {
+            // sprite, tileset, zone
+            move_key!("width");
+            move_key!("height");
+            move_key!("attributes");
+            // type field
+            move_key!("type");
+            move_key!("filePath");
+            // spritesheet-specific
+            move_key!("frame_width");
+            move_key!("frame_height");
+            move_key!("frame_count");
+            // tileset / spritesheet shared
+            move_key!("columns");
+            move_key!("rows");
+            move_key!("filetype");
+            // atlas / spritesheet shared
+            move_key!("instances");
+            move_key!("frames");
+            // depth near end
+            move_key!("initialDepth");
+            // opacity / blend
+            move_key!("alpha");
+            move_key!("blendMode");
+        }
+    }
+
+    // Any remaining keys (mask fields, notes, etc.)
+    for (k, v) in map {
+        ordered.insert(k, v);
+    }
+
+    ordered
 }
 
 fn build_layer_info(parsed: &crate::parser::ParsedLayer, layer: &psd::PsdLayer, depth: u32) -> Map<String, Value> {
@@ -287,10 +362,8 @@ fn build_layer_info(parsed: &crate::parser::ParsedLayer, layer: &psd::PsdLayer, 
         info.insert("type".into(), Value::String(lt.clone()));
     }
 
-    if !parsed.attributes.is_empty() {
-        let attrs: Map<String, Value> = parsed.attributes.clone().into_iter().collect();
-        info.insert("attributes".into(), Value::Object(attrs));
-    }
+    let attrs: Map<String, Value> = parsed.attributes.clone().into_iter().collect();
+    info.insert("attributes".into(), Value::Object(attrs));
 
     info
 }

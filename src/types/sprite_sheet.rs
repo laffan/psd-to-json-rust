@@ -40,13 +40,12 @@ impl SpriteProcessor for SpritesheetSprite {
         let mut max_height: u32 = 0;
         let mut seen_names = std::collections::HashSet::new();
         if let Some(sub_layers) = psd.get_group_sub_layers(&gid) {
-            for child in sub_layers.iter() {
-                if !child.visible() {
-                    continue;
-                }
-                if child.parent_id() != Some(gid) {
-                    continue;
-                }
+            // Reverse iteration to match Python's bottom-to-top child ordering
+            // for spritesheet frame collection.
+            let children: Vec<_> = sub_layers.iter()
+                .filter(|c| c.visible() && c.parent_id() == Some(gid))
+                .collect();
+            for child in children.iter().rev() {
 
                 let child_name = child.name().to_string();
                 let cw = child.width() as u32;
