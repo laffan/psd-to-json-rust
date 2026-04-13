@@ -100,7 +100,10 @@ impl BasicSprite {
         let mut merged = RgbaImage::new(lw, lh);
 
         if let Some(sub_layers) = psd.get_group_sub_layers(&gid) {
-            for child in sub_layers.iter() {
+            // Iterate in reverse: sub_layers is ordered top-to-bottom (front-to-back),
+            // but we need to composite bottom-to-top (back-to-front) so that upper
+            // layers are painted on top of lower ones.
+            for child in sub_layers.iter().rev() {
                 if !child.visible() {
                     continue;
                 }

@@ -153,8 +153,15 @@ pub fn composite_group(
     let psd_h = psd.height();
 
     if let Some(sub_layers) = psd.get_group_sub_layers(&gid) {
-        for child in sub_layers.iter() {
+        // Iterate in reverse: sub_layers is ordered top-to-bottom (front-to-back),
+        // but we need to composite bottom-to-top (back-to-front) so that upper
+        // layers are painted on top of lower ones.
+        for child in sub_layers.iter().rev() {
             if !child.visible() {
+                continue;
+            }
+            // Only direct children — skip layers nested in sub-groups.
+            if child.parent_id() != Some(gid) {
                 continue;
             }
             if let Some(child_img) = layer_to_cropped_image(child, psd_w, psd_h) {
