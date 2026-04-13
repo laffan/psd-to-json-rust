@@ -1,3 +1,4 @@
+pub mod blend;
 pub mod point;
 pub mod zone;
 pub mod sprite;

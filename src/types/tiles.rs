@@ -2,6 +2,7 @@ use anyhow::Result;
 use image::{RgbaImage, RgbImage};
 use serde_json::{Map, Value};
 
+use super::blend;
 use super::sprite::layer_to_cropped_image;
 use crate::config::Config;
 use crate::export::image_export;
@@ -167,7 +168,7 @@ pub fn composite_group(
             if let Some(child_img) = layer_to_cropped_image(child, psd_w, psd_h) {
                 let cx = child.layer_left() - left;
                 let cy = child.layer_top() - top;
-                alpha_composite(&mut merged, &child_img, cx, cy);
+                blend::composite(&mut merged, &child_img, cx, cy, child.blend_mode());
             }
         }
     }
@@ -175,42 +176,3 @@ pub fn composite_group(
     Some((merged, left, top))
 }
 
-/// Alpha-composite `src` onto `dst` at position (dx, dy).
-fn alpha_composite(dst: &mut RgbaImage, src: &RgbaImage, dx: i32, dy: i32) {
-    let (sw, sh) = src.dimensions();
-    for sy in 0..sh {
-        for sx in 0..sw {
-            let tx = dx + sx as i32;
-            let ty = dy + sy as i32;
-            if tx < 0 || ty < 0 {
-                continue;
-            }
-            let tx = tx as u32;
-            let ty = ty as u32;
-            if tx >= dst.width() || ty >= dst.height() {
-                continue;
-            }
-
-            let src_px = src.get_pixel(sx, sy);
-            if src_px[3] == 0 {
-                continue;
-            }
-
-            let dst_px = dst.get_pixel(tx, ty);
-            let sa = src_px[3] as f32 / 255.0;
-            let da = dst_px[3] as f32 / 255.0;
-            let out_a = sa + da * (1.0 - sa);
-
-            if out_a == 0.0 {
-                continue;
-            }
-
-            let r = ((src_px[0] as f32 * sa + dst_px[0] as f32 * da * (1.0 - sa)) / out_a) as u8;
-            let g = ((src_px[1] as f32 * sa + dst_px[1] as f32 * da * (1.0 - sa)) / out_a) as u8;
-            let b = ((src_px[2] as f32 * sa + dst_px[2] as f32 * da * (1.0 - sa)) / out_a) as u8;
-            let a = (out_a * 255.0) as u8;
-
-            dst.put_pixel(tx, ty, image::Rgba([r, g, b, a]));
-        }
-    }
-}

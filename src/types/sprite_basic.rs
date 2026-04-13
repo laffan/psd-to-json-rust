@@ -2,6 +2,7 @@ use anyhow::Result;
 use image::RgbaImage;
 use serde_json::{Map, Value};
 
+use super::blend;
 use super::sprite::{export_mask, layer_to_cropped_image, SpriteContext, SpriteProcessor};
 use crate::export::image_export;
 use crate::parser::parse_layer_name;
@@ -114,7 +115,7 @@ impl BasicSprite {
                 if let Some(child_img) = layer_to_cropped_image(child, psd.width(), psd.height()) {
                     let cx = child.layer_left() - lx;
                     let cy = child.layer_top() - ly;
-                    alpha_composite(&mut merged, &child_img, cx, cy);
+                    blend::composite(&mut merged, &child_img, cx, cy, child.blend_mode());
                 }
             }
         }
@@ -182,39 +183,3 @@ fn find_layer_by_parsed_name<'a>(
     })
 }
 
-/// Alpha-composite `src` onto `dst` at position (dx, dy).
-fn alpha_composite(dst: &mut RgbaImage, src: &RgbaImage, dx: i32, dy: i32) {
-    let (sw, sh) = src.dimensions();
-    for sy in 0..sh {
-        for sx in 0..sw {
-            let tx = dx + sx as i32;
-            let ty = dy + sy as i32;
-            if tx < 0 || ty < 0 {
-                continue;
-            }
-            let tx = tx as u32;
-            let ty = ty as u32;
-            if tx >= dst.width() || ty >= dst.height() {
-                continue;
-            }
-
-            let src_px = src.get_pixel(sx, sy);
-            let dst_px = dst.get_pixel(tx, ty);
-
-            let sa = src_px[3] as f32 / 255.0;
-            let da = dst_px[3] as f32 / 255.0;
-            let out_a = sa + da * (1.0 - sa);
-
-            if out_a == 0.0 {
-                continue;
-            }
-
-            let r = ((src_px[0] as f32 * sa + dst_px[0] as f32 * da * (1.0 - sa)) / out_a) as u8;
-            let g = ((src_px[1] as f32 * sa + dst_px[1] as f32 * da * (1.0 - sa)) / out_a) as u8;
-            let b = ((src_px[2] as f32 * sa + dst_px[2] as f32 * da * (1.0 - sa)) / out_a) as u8;
-            let a = (out_a * 255.0) as u8;
-
-            dst.put_pixel(tx, ty, image::Rgba([r, g, b, a]));
-        }
-    }
-}
