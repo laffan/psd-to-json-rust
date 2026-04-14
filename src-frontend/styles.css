@@ -3,16 +3,16 @@
 
 :root {
   --sidebar-w: 260px;
-  --bg: #1a1a2e;
-  --bg-sidebar: #16213e;
-  --bg-card: #0f3460;
-  --bg-input: #1a1a3e;
-  --accent: #e94560;
-  --accent-hover: #ff6b81;
-  --text: #eee;
-  --text-muted: #8892a4;
-  --border: #2a2a4a;
-  --terminal-bg: #0d0d1a;
+  --bg: #191919;
+  --bg-sidebar: #141414;
+  --bg-card: #222;
+  --bg-input: #1c1c1c;
+  --accent: #888;
+  --accent-hover: #aaa;
+  --text: #ddd;
+  --text-muted: #777;
+  --border: #2e2e2e;
+  --terminal-bg: #111;
   --radius: 8px;
   --transition: 0.15s ease;
 }
@@ -105,7 +105,7 @@ html, body {
   color: var(--text);
   border: 1px solid var(--border);
 }
-.btn-browse:hover { background: #1a4a7a; }
+.btn-browse:hover { background: #333; }
 .btn-browse.btn-disabled {
   opacity: 0.6;
   cursor: default;
@@ -113,13 +113,14 @@ html, body {
 }
 
 .btn-process {
-  background: var(--accent);
-  color: #fff;
+  background: var(--bg-card);
+  color: var(--text);
+  border: 1px solid var(--border);
   font-size: 14px;
   padding: 12px 16px;
   width: 100%;
 }
-.btn-process:hover { background: var(--accent-hover); }
+.btn-process:hover { background: #333; }
 .btn-process:disabled {
   opacity: 0.4;
   cursor: not-allowed;
@@ -213,7 +214,7 @@ html, body {
 }
 
 .opt-input::placeholder {
-  color: #4a4a6a;
+  color: #555;
 }
 
 /* Number inputs: hide spinner in WebKit */
@@ -244,7 +245,7 @@ html, body {
 
 .opt-hint {
   font-size: 10px;
-  color: #4a4a6a;
+  color: #555;
 }
 
 .opt-check-group {
@@ -329,10 +330,10 @@ html, body {
   word-break: break-all;
 }
 
-.terminal .line.info { color: #8892a4; }
-.terminal .line.success { color: #7bed9f; }
-.terminal .line.error { color: #ff6b6b; }
-.terminal .line.data { color: #70a1ff; }
+.terminal .line.info { color: var(--text-muted); }
+.terminal .line.success { color: var(--text); }
+.terminal .line.error { color: var(--text); }
+.terminal .line.data { color: var(--text-muted); }
 
 .terminal .welcome {
   color: var(--text-muted);
@@ -408,12 +409,12 @@ html, body {
 .thumb-card .thumb-label .thumb-dir {
   display: block;
   font-size: 10px;
-  color: #555a70;
+  color: #555;
 }
 
 /* ── Layer Tree ─────────────────────────────────── */
 .tree-block {
-  background: #101025;
+  background: #0e0e0e;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 14px 16px;
@@ -436,19 +437,16 @@ html, body {
 }
 
 .tree-prefix {
-  color: #444a60;
+  color: #444;
 }
 
 .tree-tag {
   display: inline-block;
   width: 18px;
-  height: 18px;
-  line-height: 18px;
   text-align: center;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
-  color: #fff;
-  border-radius: 3px;
+  color: var(--text-muted);
   vertical-align: middle;
 }
 
@@ -467,8 +465,8 @@ html, body {
   display: inline-block;
   width: 14px;
   height: 14px;
-  border: 2px solid rgba(255,255,255,0.3);
-  border-top-color: #fff;
+  border: 2px solid rgba(255,255,255,0.15);
+  border-top-color: #999;
   border-radius: 50%;
   animation: spin 0.6s linear infinite;
 }

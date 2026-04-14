@@ -245,13 +245,6 @@ async function loadThumb(absolutePath, imgEl) {
 }
 
 // ── Tree renderer ─────────────────────────────────────────
-const TAG_COLORS = {
-  G: "#f1c40f", // yellow  — group
-  S: "#2ecc71", // green   — sprite
-  T: "#3498db", // blue    — tileset
-  P: "#e67e22", // orange  — point
-  Z: "#9b59b6", // purple  — zone
-};
 
 function renderTree(lines) {
   const block = document.createElement("div");
@@ -280,7 +273,7 @@ function renderTree(lines) {
       const badge = document.createElement("span");
       badge.className = "tree-tag";
       badge.textContent = tagChar;
-      badge.style.backgroundColor = TAG_COLORS[tagChar] || "#666";
+
       row.appendChild(badge);
 
       // Rest of the line after the tag
