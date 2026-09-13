@@ -17,8 +17,37 @@ pub struct Config {
     pub jpg_quality: u8,
     #[serde(default, rename = "ignoreLayers")]
     pub ignore_layers: Vec<String>,
+    /// What to do with a layer that is hidden in Photoshop.
+    #[serde(default, rename = "hiddenLayers")]
+    pub hidden_layers: HiddenLayers,
     #[serde(skip)]
     pub metadata_only: bool,
+}
+
+/// What becomes of a layer whose eye is off in Photoshop.
+///
+/// Hidden is not the same as absent, and which of the two it means is the
+/// caller's to say. A game editor wants the asset exported and the manifest
+/// to say the layer is hidden, so it can be placed and turned on later; a
+/// project that uses hidden layers as scratch wants them gone from the output
+/// entirely. Neither is a safe guess, so it is a setting.
+///
+/// `Include` is the default because it is what this tool has always done —
+/// visibility was simply never read — and because it loses nothing: a
+/// consumer that does not know about `visible` behaves exactly as before.
+///
+/// Neither value says anything about a *merged* group. An `S | name` group, a
+/// tileset and an atlas are composited into one image, and compositing has
+/// always skipped hidden children the way Photoshop does — there is no
+/// separate asset there to export, or to turn on later.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum HiddenLayers {
+    /// Export them as usual, and mark them `"visible": false`.
+    #[default]
+    Include,
+    /// Leave them out: no asset, no entry, and no children of a hidden group.
+    Skip,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -59,7 +88,8 @@ pub fn load_config(base_dir: &Path) -> anyhow::Result<Config> {
              \x20 \"generateOnSave\": false,\n\
              \x20 \"pngQualityRange\": {{ \"low\": 85, \"high\": 90 }},\n\
              \x20 \"jpgQuality\": 80,\n\
-             \x20 \"ignoreLayers\": []\n\
+             \x20 \"ignoreLayers\": [],\n\
+             \x20 \"hiddenLayers\": \"include\"\n\
              }}",
             base_dir.display()
         );

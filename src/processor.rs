@@ -3,7 +3,7 @@ use psd::{BlendMode, Psd};
 use serde_json::{Map, Value};
 use std::path::Path;
 
-use crate::config::Config;
+use crate::config::{Config, HiddenLayers};
 use crate::parser::parse_layer_name;
 use crate::types::point::process_point;
 use crate::types::sprite::{create_sprite_processor, SpriteContext};
@@ -121,6 +121,9 @@ fn process_layers(
                 if config.ignore_layers.contains(&parsed.name) {
                     continue;
                 }
+                if config.hidden_layers == HiddenLayers::Skip && !layer.visible() {
+                    continue;
+                }
 
                 let mut layer_info = build_layer_info(&parsed, layer, *depth_counter);
                 *depth_counter += 1;
@@ -178,6 +181,11 @@ fn process_layers(
                 };
 
                 if config.ignore_layers.contains(&parsed.name) {
+                    continue;
+                }
+                // A hidden group takes its contents with it: the children are
+                // processed inside this arm, so skipping here skips the lot.
+                if config.hidden_layers == HiddenLayers::Skip && !group.visible() {
                     continue;
                 }
 
@@ -305,6 +313,9 @@ fn reorder_keys(mut map: Map<String, Value>) -> Map<String, Value> {
             move_key!("height");
             move_key!("initialDepth");
             move_key!("attributes");
+            move_key!("visible");
+            move_key!("alpha");
+            move_key!("blendMode");
             move_key!("children");
         }
         "point" => {
@@ -334,7 +345,8 @@ fn reorder_keys(mut map: Map<String, Value>) -> Map<String, Value> {
             move_key!("frames");
             // depth near end
             move_key!("initialDepth");
-            // opacity / blend
+            // how it is drawn, rather than what is in it
+            move_key!("visible");
             move_key!("alpha");
             move_key!("blendMode");
         }
@@ -368,7 +380,20 @@ fn build_layer_info(parsed: &crate::parser::ParsedLayer, layer: &psd::PsdLayer, 
     info
 }
 
+/// Visibility, opacity and blend mode: what the layer record says about how
+/// the layer is drawn rather than about what is in it.
+///
+/// Each is written only when it is *not* the default, which is how `alpha`
+/// and `blendMode` have always worked here — an entry with none of them is a
+/// plain, fully visible, normally blended layer, and a consumer reads a
+/// missing `visible` as true.
 fn capture_layer_properties(layer: &psd::PsdLayer, info: &mut Map<String, Value>) {
+    // Visibility. The asset is still exported: hidden says how to draw the
+    // layer, not whether anyone may have it — see `HiddenLayers`.
+    if !layer.visible() {
+        info.insert("visible".into(), Value::Bool(false));
+    }
+
     // Opacity
     if layer.opacity() != 255 {
         let alpha = (layer.opacity() as f64 / 255.0 * 100.0).round() / 100.0;
@@ -383,6 +408,12 @@ fn capture_layer_properties(layer: &psd::PsdLayer, info: &mut Map<String, Value>
 }
 
 fn capture_group_properties(group: &psd::PsdGroup, info: &mut Map<String, Value>) {
+    // A hidden group hides what is inside it, and each child says only
+    // whether *it* is hidden — so a consumer has to carry the answer down.
+    if !group.visible() {
+        info.insert("visible".into(), Value::Bool(false));
+    }
+
     if group.opacity() != 255 {
         let alpha = (group.opacity() as f64 / 255.0 * 100.0).round() / 100.0;
         info.insert("alpha".into(), Value::from(alpha));

@@ -51,7 +51,8 @@ Create a `psd-to-json.config` JSON file in your project directory:
     "high": 90
   },
   "jpgQuality": 80,
-  "ignoreLayers": []
+  "ignoreLayers": [],
+  "hiddenLayers": "include"
 }
 ```
 
@@ -65,6 +66,7 @@ Create a `psd-to-json.config` JSON file in your project directory:
 | `pngQualityRange` | object | {low: 45, high: 65} | PNG quality range (for future optimization) |
 | `jpgQuality` | number | 85 | JPEG quality for tile export |
 | `ignoreLayers` | string[] | [] | Layer names to skip during processing |
+| `hiddenLayers` | `"include"` \| `"skip"` | `"include"` | What to do with layers hidden in Photoshop — see [Hidden layers](#hidden-layers) |
 
 ## Layer Naming System
 
@@ -136,6 +138,40 @@ Produces:
   }
 }
 ```
+
+## Hidden Layers
+
+A layer whose eye is off in Photoshop is **exported as usual** and marked in
+the JSON:
+
+```json
+{
+  "name": "stashed",
+  "category": "sprite",
+  "visible": false
+}
+```
+
+Hidden says how a layer is *drawn*, not whether the game may have it — the
+PNG is written and the entry is there, so a consumer can place it and turn it
+on later. `visible` is written only when it is false, alongside `alpha` and
+`blendMode`, which are likewise written only when they are not the default:
+an entry with none of the three is a plain, fully visible, normally blended
+layer, and a missing `visible` reads as `true`.
+
+A group carries its own `visible`, and its children carry only their own. A
+child of a hidden group is not itself marked hidden, so **carrying the
+group's answer down is the consumer's job** — the same way Photoshop's own
+panel shows a lit eye on a layer inside a folder that is switched off.
+
+Set `"hiddenLayers": "skip"` to leave them out of the output entirely: no
+asset, no entry, and no children of a hidden group. That is for projects that
+use hidden layers as scratch rather than as content.
+
+Neither setting says anything about a **merged** group. An `S | name` group, a
+tileset and an atlas are composited into a single image, and compositing has
+always skipped hidden children the way Photoshop does — there is no separate
+asset there to export, or to turn on later.
 
 ## Layer Masks
 
