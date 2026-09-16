@@ -59,6 +59,28 @@ pub fn parse_layer_name(name: &str) -> Option<ParsedLayer> {
     Some(result)
 }
 
+/// What a **frame** inside a composited group is called.
+///
+/// An atlas, a spritesheet and an animation swallow their children: the group
+/// becomes one image and each child becomes a frame of it, addressed by name
+/// from game code — `frame: ['purple']`. So the name that matters is the one
+/// the author typed, not the raw layer name.
+///
+/// Photoshop files written by hand name those children plainly, and there the
+/// two are the same string. A file written by an editor need not: Idlewild
+/// gives every layer it creates the sprite prefix, so grouping two of them
+/// into an atlas yields children called `S | purple` — and a frame under that
+/// key is a frame nobody can ask for. Stripping the prefix is what makes the
+/// two spellings mean the same atlas.
+///
+/// A name that is not in the pipe convention at all is its own answer, which
+/// is what keeps plainly-named frames working exactly as before.
+pub fn frame_name(raw: &str) -> String {
+    parse_layer_name(raw)
+        .map(|parsed| parsed.name)
+        .unwrap_or_else(|| raw.trim().to_string())
+}
+
 /// Parse a comma-separated attribute string into a map of key:value pairs.
 fn parse_attribute_string(attr_str: &str) -> Option<HashMap<String, Value>> {
     let attr_str = attr_str.trim();

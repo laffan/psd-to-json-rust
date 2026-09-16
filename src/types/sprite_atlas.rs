@@ -4,7 +4,7 @@ use serde_json::{Map, Value};
 
 use super::sprite::{layer_to_cropped_image, export_mask, SpriteContext, SpriteProcessor};
 use crate::export::image_export;
-use crate::parser::parse_layer_name;
+use crate::parser::{frame_name, parse_layer_name};
 
 pub struct AtlasSprite;
 
@@ -45,7 +45,7 @@ impl SpriteProcessor for AtlasSprite {
                 .filter(|c| c.visible() && c.parent_id() == Some(gid))
                 .collect();
             for child in children.iter().rev() {
-                let child_name = child.name().to_string();
+                let child_name = frame_name(child.name());
                 let cw = child.width() as u32;
                 let ch = child.height() as u32;
 

@@ -255,10 +255,28 @@ fn process_layers(
                     }
                 }
 
-                // Recursively process children
-                let children = process_layers(psd, config, psd_name, psd_output_dir, Some(*gid), depth_counter)?;
-                if !children.is_empty() {
-                    layer_info.insert("children".into(), Value::Array(children));
+                // Recursively process children — unless this group has
+                // already eaten them.
+                //
+                // A sprite group and a tileset group are *composited*: the
+                // children are merged, packed or diced into the one image the
+                // group exports, and psd-to-json's own README says so of each
+                // type that has children — "Child layer files are not saved."
+                // Walking into them afterwards exports every child a second
+                // time as a sprite in its own right and hangs a `children`
+                // array off a layer the consumer reads as a single image.
+                //
+                // Nothing catches that on a file named by hand, because a
+                // frame there is called `purple` and the parser ignores a name
+                // with no pipes in it. An editor that prefixes every layer it
+                // writes — Idlewild does — gets `S | purple`, which parses,
+                // and then one atlas exports three PNGs and psd-to-phaser
+                // counts assets it will never be asked to load.
+                if !composites_children(&parsed.category) {
+                    let children = process_layers(psd, config, psd_name, psd_output_dir, Some(*gid), depth_counter)?;
+                    if !children.is_empty() {
+                        layer_info.insert("children".into(), Value::Array(children));
+                    }
                 }
 
                 // Export mask for group layers
@@ -275,6 +293,16 @@ fn process_layers(
     }
 
     Ok(result_layers)
+}
+
+/// Whether a group of this category swallows its children.
+///
+/// Sprites and tilesets composite: whatever the type, the group is exported as
+/// one image built from what is inside it, so the children are frames or tiles
+/// of that image rather than layers of their own. `G | name` is the category
+/// that keeps its children as layers, which is what a group is for.
+fn composites_children(category: &str) -> bool {
+    matches!(category, "sprite" | "tileset")
 }
 
 enum LevelItem {

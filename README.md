@@ -108,6 +108,30 @@ category | name | type | attributes
 - `S | icons | spritesheet |` — grid spritesheet
 - `S | uiElements | atlas |` — texture atlas
 
+#### Children of a composited group
+
+A sprite group is exported as **one** image built from what is inside it, and
+so is a tileset. The children are frames or tiles of that image rather than
+layers in their own right, so no PNG is written for a child and the group
+carries no `children` in the JSON — only the `frames` and `instances` that say
+where each one went. `G | name` is the category that keeps its children.
+
+A frame is addressed by name from game code, and the name is the one you typed:
+
+```
+S | confetti | atlas |
+├── purple        →  frames: { "purple": … }
+└── S | green     →  frames: { "green":  … }
+```
+
+Both spellings mean the same frame. Files written by hand name frames plainly;
+an editor that prefixes every layer it creates — [Idlewild](https://github.com/laffan/idlewild-editor)
+does — gets the second form, and the prefix is stripped rather than carried
+into the frame key, where nothing could ask for it.
+
+Animation frames are numbered rather than named, and are ordered by the
+number: `2` comes before `10`, whether or not the names are zero-padded.
+
 ### Tile Types
 
 | Type | Description |

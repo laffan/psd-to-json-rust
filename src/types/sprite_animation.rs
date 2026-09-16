@@ -4,7 +4,7 @@ use serde_json::{Map, Value};
 
 use super::sprite::{layer_to_cropped_image, export_mask, SpriteContext, SpriteProcessor};
 use crate::export::image_export;
-use crate::parser::parse_layer_name;
+use crate::parser::{frame_name, parse_layer_name};
 
 pub struct AnimationSprite;
 
@@ -33,20 +33,26 @@ impl SpriteProcessor for AnimationSprite {
             }
         };
 
-        // Collect frames: children with integer names, sorted by name
-        let mut frame_layers: Vec<&psd::PsdLayer> = Vec::new();
+        // Collect frames: children whose names are frame numbers, in order.
+        //
+        // The number is read through `frame_name`, so `001` and `S | 001` are
+        // the same frame — see there. Ordering is by the number itself rather
+        // than by its spelling: `2` sorts before `10`, which a string compare
+        // gets backwards on any file whose frames are not zero-padded.
+        let mut frame_layers: Vec<(i32, &psd::PsdLayer)> = Vec::new();
         if let Some(sub_layers) = psd.get_group_sub_layers(&gid) {
             for child in sub_layers.iter() {
                 if child.parent_id() != Some(gid) {
                     continue;
                 }
-                // Check if name is an integer (animation frame numbering)
-                if child.name().parse::<i32>().is_ok() {
-                    frame_layers.push(child);
+                if let Ok(number) = frame_name(child.name()).parse::<i32>() {
+                    frame_layers.push((number, child));
                 }
             }
         }
-        frame_layers.sort_by(|a, b| a.name().cmp(b.name()));
+        frame_layers.sort_by_key(|(number, _)| *number);
+        let frame_layers: Vec<&psd::PsdLayer> =
+            frame_layers.into_iter().map(|(_, layer)| layer).collect();
 
         if frame_layers.is_empty() {
             anyhow::bail!("No valid frames found in animation group '{}'", name);
