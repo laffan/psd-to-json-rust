@@ -53,8 +53,10 @@ pub fn export_mask(
     };
 
     // Skip "reveal all" masks (all-white / 255 pixels) — they have no visual
-    // effect and the Python version doesn't include them.
-    if let Some(mask_data) = layer.mask_pixels() {
+    // effect and the Python version doesn't include them. Decompressed once
+    // and kept: the export below reads the same pixels.
+    let mask_pixels = layer.mask_pixels();
+    if let Some(mask_data) = &mask_pixels {
         if mask_data.iter().all(|&b| b == 255) {
             return Ok(());
         }
@@ -74,7 +76,7 @@ pub fn export_mask(
     std::fs::create_dir_all(&mask_dir)?;
 
     // Get mask pixel data from the layer
-    if let Some(mask_data) = layer.mask_pixels() {
+    if let Some(mask_data) = mask_pixels {
         let w = mask.width();
         let h = mask.height();
         if w > 0 && h > 0 {
@@ -109,34 +111,82 @@ pub fn layer_to_cropped_image(layer: &psd::PsdLayer, psd_width: u32, psd_height:
     }
 
     let rgba_data = layer.composite_rgba();
-    let canvas_w = psd_width;
-    let canvas_h = psd_height;
+    let canvas_w = psd_width as usize;
+    let canvas_h = psd_height as usize;
 
+    // A row at a time rather than a pixel at a time: the layer's window onto
+    // the canvas buffer is a run of whole rows, and at print resolution a
+    // sprite is millions of pixels. The window starts at the layer's corner
+    // clamped to the canvas, and whatever of the layer falls past the
+    // canvas's right or bottom edge stays clear.
+    let left = layer.layer_left().max(0) as usize;
+    let top = layer.layer_top().max(0) as usize;
     let mut img = RgbaImage::new(lw, lh);
-    let left = layer.layer_left().max(0) as u32;
-    let top = layer.layer_top().max(0) as u32;
-
-    for dy in 0..lh {
-        for dx in 0..lw {
-            let sx = left + dx;
-            let sy = top + dy;
-            if sx < canvas_w && sy < canvas_h {
-                let idx = ((sy * canvas_w + sx) * 4) as usize;
-                if idx + 3 < rgba_data.len() {
-                    img.put_pixel(
-                        dx,
-                        dy,
-                        image::Rgba([
-                            rgba_data[idx],
-                            rgba_data[idx + 1],
-                            rgba_data[idx + 2],
-                            rgba_data[idx + 3],
-                        ]),
-                    );
-                }
-            }
+    let run = (lw as usize).min(canvas_w.saturating_sub(left));
+    if run > 0 {
+        let out: &mut [u8] = &mut img;
+        for dy in 0..(lh as usize).min(canvas_h.saturating_sub(top)) {
+            let from = ((top + dy) * canvas_w + left) * 4;
+            let Some(source) = rgba_data.get(from..from + run * 4) else {
+                break;
+            };
+            let into = dy * lw as usize * 4;
+            out[into..into + run * 4].copy_from_slice(source);
         }
     }
 
     Some(img)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use psd::{LayerBuilder, Psd, PsdBuilder};
+
+    /// The crop as it was written before it copied whole rows: one pixel at
+    /// a time, through `put_pixel`.
+    fn pixel_by_pixel(layer: &psd::PsdLayer, canvas_w: u32, canvas_h: u32) -> RgbaImage {
+        let (lw, lh) = (layer.width() as u32, layer.height() as u32);
+        let rgba = layer.composite_rgba();
+        let mut img = RgbaImage::new(lw, lh);
+        let left = layer.layer_left().max(0) as u32;
+        let top = layer.layer_top().max(0) as u32;
+        for dy in 0..lh {
+            for dx in 0..lw {
+                let (sx, sy) = (left + dx, top + dy);
+                if sx < canvas_w && sy < canvas_h {
+                    let i = ((sy * canvas_w + sx) * 4) as usize;
+                    img.put_pixel(dx, dy, image::Rgba([rgba[i], rgba[i + 1], rgba[i + 2], rgba[i + 3]]));
+                }
+            }
+        }
+        img
+    }
+
+    /// Every pixel different, so a row landing one place off shows.
+    fn gradient(w: u32, h: u32) -> Vec<u8> {
+        (0..w * h)
+            .flat_map(|i| [(i % 251) as u8, (i / 7 % 253) as u8, (i % 13 * 19) as u8, 200])
+            .collect()
+    }
+
+    #[test]
+    fn whole_rows_crop_what_single_pixels_did() {
+        let (cw, ch) = (40, 30);
+        let placed = [(5, 4, 12, 9), (-6, 3, 15, 8), (30, 25, 20, 12), (-3, -2, 50, 40), (0, 0, 40, 30)];
+        let mut builder = PsdBuilder::new(cw, ch);
+        for (i, (x, y, w, h)) in placed.iter().enumerate() {
+            builder.add_layer(
+                LayerBuilder::new(format!("S | l{i}"))
+                    .rgba(*w, *h, gradient(*w, *h))
+                    .at(*x, *y)
+                    .opacity(if i == 2 { 128 } else { 255 }),
+            );
+        }
+        let doc = Psd::from_bytes(&builder.to_bytes().unwrap()).unwrap();
+        for layer in doc.layers() {
+            let rows = layer_to_cropped_image(layer, cw, ch).unwrap();
+            assert_eq!(rows, pixel_by_pixel(layer, cw, ch), "{}", layer.name());
+        }
+    }
 }
